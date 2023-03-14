@@ -9,8 +9,7 @@ import { logger } from '../logger';
 export type IConnectionReadyCallback = ICallback<void>;
 export type IEventCallback = ICallback<Event>;
 
-export interface IOriginateOptions
-{
+export interface IOriginateOptions {
     profile: string;
     number: string;
     gateway: string;
@@ -18,8 +17,7 @@ export interface IOriginateOptions
     sync?: boolean;
 }
 
-export interface IMessageOptions
-{
+export interface IMessageOptions {
     to: string;
     from: string;
     profile: string;
@@ -28,14 +26,12 @@ export interface IMessageOptions
     deliveryConfirmation?: string;
 }
 
-export enum ConnectionType
-{
+export enum ConnectionType {
     Outbound, // "Outbound" connection, coming from FSW
     Inbound, // "Inbound" connection, going into FSW
 }
 
-export enum ConnectionEvent
-{
+export enum ConnectionEvent {
     AuthSuccess = 'esl::event::auth::success',
     AuthFail = 'esl::event::auth::fail',
     Connect = 'esl::connect',
@@ -50,8 +46,7 @@ export enum ConnectionEvent
  *
  * @see https://freeswitch.org/confluence/display/FREESWITCH/Event+Socket+Library#EventSocketLibrary-ESLconnectionObject
  */
-export class Connection extends EventEmitter2
-{
+export class Connection extends EventEmitter2 {
     execAsync = false;
     execLock = false;
 
@@ -65,85 +60,75 @@ export class Connection extends EventEmitter2
     private _connecting = true;
     private _usingFilters = false;
     private _channelData: Event | null = null;
-    private _cmdCallbackQueue: (IEventCallback | undefined)[] = [];
-    private _apiCallbackQueue: (IEventCallback | undefined)[] = [];
+    private _cmdCallbackQueue: ( IEventCallback | undefined )[] = [];
+    private _apiCallbackQueue: ( IEventCallback | undefined )[] = [];
 
-    constructor(socket: net.Socket, type: ConnectionType, readyCallback?: IConnectionReadyCallback)
-    {
-        super({
+    constructor( socket: net.Socket, type: ConnectionType, readyCallback?: IConnectionReadyCallback ) {
+        super( {
             wildcard: true,
             delimiter: '::',
             maxListeners: 25,
-        });
+        } );
 
         this.type = type;
         this._socket = socket;
-        this._reqEvents = ['BACKGROUND_JOB', 'CHANNEL_EXECUTE_COMPLETE'];
+        this._reqEvents = ['BACKGROUND_JOB'];
         this._parser = null;
 
-        if (readyCallback)
-            this.once(ConnectionEvent.Ready, readyCallback);
+        if ( readyCallback )
+            this.once( ConnectionEvent.Ready, readyCallback );
 
-        if (type == ConnectionType.Inbound)
-        {
-            if (socket.connecting)
-                socket.on('connect', () => this._onConnect());
+        if ( type == ConnectionType.Inbound ) {
+            if ( socket.connecting )
+                socket.on( 'connect', () => this._onConnect() );
             else
                 this._onConnect();
         }
-        else
-        {
+        else {
             this._onConnect();
 
-            this.sendRecv('connect', () =>
-            {
-                this.subscribe(this._reqEvents, () =>
-                {
-                    this.emit(ConnectionEvent.Ready);
-                });
-            });
+            this.sendRecv( 'connect', () => {
+                this.subscribe( this._reqEvents, () => {
+                    this.emit( ConnectionEvent.Ready );
+                } );
+            } );
         }
 
-        socket.on('error', (err: Error) =>
-        {
-            this.emit(ConnectionEvent.Error, err);
-        });
+        socket.on( 'error', ( err: Error ) => {
+            this.emit( ConnectionEvent.Error, err );
+        } );
 
         // Emit end when stream closes
-        socket.on('end', () =>
-        {
-            this.emit(ConnectionEvent.End);
-        });
+        socket.on( 'end', () => {
+            this.emit( ConnectionEvent.End );
+        } );
 
         // Handle logdata events
-        this.on('esl::event::logdata', function (event: Event)
-        {
-            logger.log(event);
-        });
+        this.on( 'esl::event::logdata', function ( event: Event ) {
+            logger.log( event );
+        } );
 
         // Handle command reply callbacks
-        this.on('esl::event::command::reply', (event: Event) =>
-        {
-            if (this._cmdCallbackQueue.length === 0)
+        this.on( 'esl::event::command::reply', ( event: Event ) => {
+            if ( this._cmdCallbackQueue.length === 0 )
                 return;
 
             const fn = this._cmdCallbackQueue.shift();
 
-            if (fn && typeof fn === 'function')
-                fn.call(this, event);
-        });
+            if ( fn && typeof fn === 'function' )
+                fn.call( this, event );
+        } );
 
         // Handle api response callbacks
-        this.on('esl::event::api::response', (event: Event) =>
-        {
-            if (this._apiCallbackQueue.length === 0)
+        this.on( 'esl::event::api::response', ( event: Event ) => {
+            if ( this._apiCallbackQueue.length === 0 )
                 return;
 
             const fn = this._apiCallbackQueue.shift();
 
-            if (fn && typeof fn === 'function')
-                fn.call(this, event);
-        });
+            if ( fn && typeof fn === 'function' )
+                fn.call( this, event );
+        } );
     }
 
     /**
@@ -160,20 +145,18 @@ export class Connection extends EventEmitter2
      * not bound to a particular channel). In plain language, this means that
      * calls to getInfo() will always return NULL.
      */
-    static createInbound(options: net.NetConnectOpts, password: string, readyCallback?: IConnectionReadyCallback): Connection;
-    static createInbound(socket: net.Socket, password: string, readyCallback?: IConnectionReadyCallback): Connection;
-    static createInbound(
+    static createInbound ( options: net.NetConnectOpts, password: string, readyCallback?: IConnectionReadyCallback ): Connection;
+    static createInbound ( socket: net.Socket, password: string, readyCallback?: IConnectionReadyCallback ): Connection;
+    static createInbound (
         optionsOrSocket: net.NetConnectOpts | net.Socket,
         password: string,
-        readyCallback?: IConnectionReadyCallback): Connection
-    {
-        const socket = optionsOrSocket instanceof net.Socket ? optionsOrSocket : net.connect(optionsOrSocket);
-        const conn = new Connection(socket, ConnectionType.Inbound, readyCallback);
+        readyCallback?: IConnectionReadyCallback ): Connection {
+        const socket = optionsOrSocket instanceof net.Socket ? optionsOrSocket : net.connect( optionsOrSocket );
+        const conn = new Connection( socket, ConnectionType.Inbound, readyCallback );
 
-        conn.on('esl::event::auth::request', function ()
-        {
-            conn.auth(password);
-        });
+        conn.on( 'esl::event::auth::request', function () {
+            conn.auth( password );
+        } );
 
         return conn;
     }
@@ -193,25 +176,24 @@ export class Connection extends EventEmitter2
      * NOTE: The Connection class represents 1 connection from FSW. For multiple
      * connections use esl.Server
      */
-    static createOutbound(socket: net.Socket, readyCallback?: IConnectionReadyCallback): Connection
-    {
-        return new Connection(socket, ConnectionType.Outbound, readyCallback);
+    static createOutbound ( socket: net.Socket, readyCallback?: IConnectionReadyCallback ): Connection {
+        return new Connection( socket, ConnectionType.Outbound, readyCallback );
     }
 
     /**
      * True if this connection is authenticated with FSW, false otherwise.
      */
-    get authed() { return this._authed; }
+    get authed () { return this._authed; }
 
     /**
      * True if this we're still connecting to FSW, false otherwise.
      */
-    get connecting() { return this._connecting; }
+    get connecting () { return this._connecting; }
 
     /**
      * The underlying node socket.
      */
-    get socket() { return this._socket; }
+    get socket () { return this._socket; }
 
     /**
      * Lower-level ESL Specification
@@ -223,12 +205,12 @@ export class Connection extends EventEmitter2
      * This is the same socket that was passed to the constructor.
      * If the connection is an `Inbound` connection, null is returned.
      */
-    socketDescriptor() { return this.type === ConnectionType.Inbound ? null : this._socket; }
+    socketDescriptor () { return this.type === ConnectionType.Inbound ? null : this._socket; }
 
     /**
      * Test if the connection object is connected. Returns `true` if connected, `false` otherwise.
      */
-    connected() { return (!this._connecting && !!this._socket); }
+    connected () { return ( !this._connecting && !!this._socket ); }
 
     /**
      * When FS connects to an "Event Socket Outbound" handler, it sends
@@ -237,7 +219,7 @@ export class Connection extends EventEmitter2
      *
      * getInfo() returns `null` when used on an `Inbound` connection.
      */
-    getInfo() { return this._channelData; }
+    getInfo () { return this._channelData; }
 
     /**
      * Sends a command to FreeSWITCH.
@@ -251,29 +233,24 @@ export class Connection extends EventEmitter2
      *
      * NOTE: This is a FAF method of sending a command
      */
-    send(command: string, args?: IDictionary<string>): void
-    {
-        try
-        {
-            this._socket.write(command);
-            this._socket.write('\n');
+    send ( command: string, args?: IDictionary<string> ): void {
+        try {
+            this._socket.write( command );
+            this._socket.write( '\n' );
 
-            if (args)
-            {
-                const keys = Object.keys(args);
+            if ( args ) {
+                const keys = Object.keys( args );
 
-                for (let i = 0; i < keys.length; ++i)
-                {
+                for ( let i = 0; i < keys.length; ++i ) {
                     const key = keys[i];
-                    this._socket.write(`${key}: ${args[key]}\n`);
+                    this._socket.write( `${key}: ${args[key]}\n` );
                 }
             }
 
-            this._socket.write('\n');
+            this._socket.write( '\n' );
         }
-        catch (e)
-        {
-            this.emit(ConnectionEvent.Error, e);
+        catch ( e ) {
+            this.emit( ConnectionEvent.Error, e );
         }
     }
 
@@ -291,25 +268,22 @@ export class Connection extends EventEmitter2
      * NOTE: This listens for a response when calling `.send()` doing recvEvent() in a loop
      * doesn't make sense in the contet of Node.
      */
-    sendRecv(command: string, cb?: IEventCallback): void;
-    sendRecv(command: string, args: IDictionary<string>, cb?: IEventCallback): void;
-    sendRecv(command: string, argsOrCallback?: IDictionary<string> | IEventCallback, cb?: IEventCallback): void
-    {
+    sendRecv ( command: string, cb?: IEventCallback ): void;
+    sendRecv ( command: string, args: IDictionary<string>, cb?: IEventCallback ): void;
+    sendRecv ( command: string, argsOrCallback?: IDictionary<string> | IEventCallback, cb?: IEventCallback ): void {
         let args;
 
-        if (typeof argsOrCallback === 'function')
-        {
+        if ( typeof argsOrCallback === 'function' ) {
             cb = argsOrCallback;
             args = undefined;
         }
-        else
-        {
+        else {
             args = argsOrCallback;
         }
 
-        this._cmdCallbackQueue.push(cb);
+        this._cmdCallbackQueue.push( cb );
 
-        this.send(command, args);
+        this.send( command, args );
     }
 
     /**
@@ -318,34 +292,29 @@ export class Connection extends EventEmitter2
      *
      * api($command, $args) is identical to sendRecv("api $command $args").
      */
-    api(command: string, cb?: IEventCallback): void;
-    api(command: string, args: string | string[], cb?: IEventCallback): void;
-    api(command: string, argsOrCallback?: string | string[] | IEventCallback, cb?: IEventCallback): void
-    {
+    api ( command: string, cb?: IEventCallback ): void;
+    api ( command: string, args: string | string[], cb?: IEventCallback ): void;
+    api ( command: string, argsOrCallback?: string | string[] | IEventCallback, cb?: IEventCallback ): void {
         let args: string | undefined;
 
-        if (typeof argsOrCallback === 'function')
-        {
+        if ( typeof argsOrCallback === 'function' ) {
             cb = argsOrCallback;
             args = '';
         }
-        else if (Array.isArray(argsOrCallback))
-        {
-            args = argsOrCallback.join(' ');
+        else if ( Array.isArray( argsOrCallback ) ) {
+            args = argsOrCallback.join( ' ' );
         }
-        else
-        {
+        else {
             args = argsOrCallback;
         }
 
-        this._apiCallbackQueue.push(cb);
+        this._apiCallbackQueue.push( cb );
 
-        if (args)
-        {
+        if ( args ) {
             command += ` ${args}`;
         }
 
-        this.send(`api ${command}`);
+        this.send( `api ${command}` );
     }
 
     /**
@@ -354,105 +323,92 @@ export class Connection extends EventEmitter2
      *
      * bgapi($command, $args) is identical to sendRecv("bgapi $command $args")
      */
-    bgapi(command: string, cb?: IEventCallback): void;
-    bgapi(command: string, args: string | string[], cb?: IEventCallback): void;
-    bgapi(command: string, args: string | string[], jobid: string, cb?: IEventCallback): void;
-    bgapi(command: string, argsOrCallback?: string | string[] | IEventCallback, jobidOrCallback?: string | IEventCallback, cb?: IEventCallback): void
-    {
+    bgapi ( command: string, cb?: IEventCallback ): void;
+    bgapi ( command: string, args: string | string[], cb?: IEventCallback ): void;
+    bgapi ( command: string, args: string | string[], jobid: string, cb?: IEventCallback ): void;
+    bgapi ( command: string, argsOrCallback?: string | string[] | IEventCallback, jobidOrCallback?: string | IEventCallback, cb?: IEventCallback ): void {
         let args: string | undefined;
         let jobid = uuid.v4();
 
-        if (typeof argsOrCallback === 'function')
-        {
+        if ( typeof argsOrCallback === 'function' ) {
             cb = argsOrCallback;
             args = '';
         }
-        else
-        {
-            if (Array.isArray(argsOrCallback))
-                args = argsOrCallback.join(' ');
+        else {
+            if ( Array.isArray( argsOrCallback ) )
+                args = argsOrCallback.join( ' ' );
             else
                 args = argsOrCallback;
 
-            if (typeof jobidOrCallback === 'function')
-            {
+            if ( typeof jobidOrCallback === 'function' ) {
                 cb = jobidOrCallback;
             }
-            else if (jobidOrCallback)
-            {
+            else if ( jobidOrCallback ) {
                 jobid = jobidOrCallback;
             }
         }
 
-        if (args)
-        {
+        if ( args ) {
             command += ` ${args}`;
         }
 
-        if (this._usingFilters)
-        {
+        if ( this._usingFilters ) {
             this._sendApiCommand(
                 command,
                 jobid,
-                (cb) => this.filter(HeaderNames.JobUuid, jobid, cb),
-                (cb) => this.filterDelete(HeaderNames.JobUuid, jobid, cb),
-                cb);
+                ( cb ) => this.filter( HeaderNames.JobUuid, jobid, cb ),
+                ( cb ) => this.filterDelete( HeaderNames.JobUuid, jobid, cb ),
+                cb );
         }
-        else
-        {
+        else {
             this._sendApiCommand(
                 command,
                 jobid,
-                (cb) => cb && cb(),
-                (cb) => cb && cb(),
-                cb);
+                ( cb ) => cb && cb(),
+                ( cb ) => cb && cb(),
+                cb );
         }
     }
 
     /**
      * NOTE: This is a wrapper around sendRecv, that uses an ESLevent for the data
      */
-    sendEvent(event: Event, cb?: IEventCallback): void
-    {
-        const eventName = event.getHeader(HeaderNames.EventName);
+    sendEvent ( event: Event, cb?: IEventCallback ): void {
+        const eventName = event.getHeader( HeaderNames.EventName );
         const serializedEvent = event.serialize();
         const command = `sendevent ${eventName}\n${serializedEvent}`;
 
-        this.sendRecv(command, cb);
+        this.sendRecv( command, cb );
     }
 
     /**
      * See the event socket filter command (https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-filter).
      */
-    filter(header: string, value: string, cb?: IEventCallback): void
-    {
+    filter ( header: string, value: string, cb?: IEventCallback ): void {
         this._usingFilters = true;
-        this.sendRecv(`filter ${header} ${value}`, cb);
+        this.sendRecv( `filter ${header} ${value}`, cb );
     }
 
     /**
      * Deletes an event filter previously setup with [[Connection.filter]].
      */
-    filterDelete(header: string, cb?: IEventCallback): void;
-    filterDelete(header: string, value: string, cb?: IEventCallback): void;
-    filterDelete(header: string, valueOrCallback?: string | IEventCallback, cb?: IEventCallback): void
-    {
+    filterDelete ( header: string, cb?: IEventCallback ): void;
+    filterDelete ( header: string, value: string, cb?: IEventCallback ): void;
+    filterDelete ( header: string, valueOrCallback?: string | IEventCallback, cb?: IEventCallback ): void {
         let value: string | undefined;
 
-        if (typeof valueOrCallback === 'function')
-        {
+        if ( typeof valueOrCallback === 'function' ) {
             cb = valueOrCallback;
             value = undefined;
         }
 
         let command = `filter delete ${header}`;
 
-        if (value)
-        {
+        if ( value ) {
             command += ` ${value}`;
         }
 
-        this.sendRecv(command, cb);
+        this.sendRecv( command, cb );
     }
 
     /**
@@ -461,43 +417,38 @@ export class Connection extends EventEmitter2
      *
      * See the event socket event command for more info (https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-event).
      */
-    events(format: IFormat, cb?: IEventCallback): void;
-    events(format: IFormat, events: string | string[], cb?: IEventCallback): void;
-    events(format: IFormat, eventsOrCallback?: string | string[] | IEventCallback, cb?: IEventCallback): void
-    {
+    events ( format: IFormat, cb?: IEventCallback ): void;
+    events ( format: IFormat, events: string | string[], cb?: IEventCallback ): void;
+    events ( format: IFormat, eventsOrCallback?: string | string[] | IEventCallback, cb?: IEventCallback ): void {
         let events: string[] = ['all'];
 
-        if (typeof eventsOrCallback === 'function')
-        {
+        if ( typeof eventsOrCallback === 'function' ) {
             cb = eventsOrCallback;
         }
-        else if (eventsOrCallback)
-        {
-            if (Array.isArray(eventsOrCallback))
+        else if ( eventsOrCallback ) {
+            if ( Array.isArray( eventsOrCallback ) )
                 events = eventsOrCallback;
             else
-                events = eventsOrCallback.split(' ');
+                events = eventsOrCallback.split( ' ' );
         }
 
-        if (!isValidFormat(format))
+        if ( !isValidFormat( format ) )
             format = 'plain';
 
         const isAll = events.length === 1 && events[0] === 'all';
 
-        if (!isAll)
-        {
-            for (let i = 0; i < this._reqEvents.length; ++i)
-            {
-                if (events.indexOf(this._reqEvents[i]) !== -1)
+        if ( !isAll ) {
+            for ( let i = 0; i < this._reqEvents.length; ++i ) {
+                if ( events.indexOf( this._reqEvents[i] ) !== -1 )
                     continue;
 
-                events.push(this._reqEvents[i]);
+                events.push( this._reqEvents[i] );
             }
         }
 
-        const command = `event ${format} ${events.join(' ')}`;
+        const command = `event ${format} ${events.join( ' ' )}`;
 
-        this.sendRecv(command, cb);
+        this.sendRecv( command, cb );
     }
 
     /**
@@ -512,29 +463,24 @@ export class Connection extends EventEmitter2
      * response. The server's response will contain "+OK [Success Message]" on success
      * or "-ERR [Error Message]" on failure.
      */
-    execute(app: string, cb?: IEventCallback): string;
-    execute(app: string, arg: string, cb?: IEventCallback): string;
-    execute(app: string, arg: string, uuid: string, cb?: IEventCallback): string;
-    execute(app: string, argOrCallback?: string | IEventCallback, uuidOrCallback?: string | IEventCallback, cb?: IEventCallback): string
-    {
+    execute ( app: string, cb?: IEventCallback ): string;
+    execute ( app: string, arg: string, cb?: IEventCallback ): string;
+    execute ( app: string, arg: string, uuid: string, cb?: IEventCallback ): string;
+    execute ( app: string, argOrCallback?: string | IEventCallback, uuidOrCallback?: string | IEventCallback, cb?: IEventCallback ): string {
         let arg = '';
         let uniqueId = uuid.v4();
 
-        if (typeof argOrCallback === 'function')
-        {
+        if ( typeof argOrCallback === 'function' ) {
             cb = argOrCallback;
         }
-        else
-        {
-            if (argOrCallback)
+        else {
+            if ( argOrCallback )
                 arg = argOrCallback;
 
-            if (typeof uuidOrCallback === 'function')
-            {
+            if ( typeof uuidOrCallback === 'function' ) {
                 cb = uuidOrCallback;
             }
-            else if (uuidOrCallback)
-            {
+            else if ( uuidOrCallback ) {
                 uniqueId = uuidOrCallback;
             }
         }
@@ -543,19 +489,17 @@ export class Connection extends EventEmitter2
             'execute-app-name': app,
         };
 
-        if (typeof arg !== 'undefined' && arg.toString().length > 0)
+        if ( typeof arg !== 'undefined' && arg.toString().length > 0 )
             options['execute-app-arg'] = arg.toString();
 
-        if (this.type === ConnectionType.Inbound)
-        {
-            return this._sendExecute(uniqueId, options, cb);
+        if ( this.type === ConnectionType.Inbound ) {
+            return this._sendExecute( uniqueId, options, cb );
         }
-        else if (this._channelData)
-        {
-            const infoUniqueId = this._channelData.getHeader('Unique-ID');
+        else if ( this._channelData ) {
+            const infoUniqueId = this._channelData.getHeader( 'Unique-ID' );
 
-            if (infoUniqueId)
-                return this._sendExecute(infoUniqueId, options, cb);
+            if ( infoUniqueId )
+                return this._sendExecute( infoUniqueId, options, cb );
         }
 
         return '';
@@ -567,15 +511,14 @@ export class Connection extends EventEmitter2
      * This works by causing the underlying call to execute() to append
      * "async: true" header in the message sent to the channel.
      */
-    executeAsync(app: string, cb?: IEventCallback): string;
-    executeAsync(app: string, arg: string, cb?: IEventCallback): string;
-    executeAsync(app: string, arg: string, uuid: string, cb?: IEventCallback): string;
-    executeAsync(app: string, argOrCallback?: string | IEventCallback, uuidOrCallback?: string | IEventCallback, cb?: IEventCallback): string
-    {
+    executeAsync ( app: string, cb?: IEventCallback ): string;
+    executeAsync ( app: string, arg: string, cb?: IEventCallback ): string;
+    executeAsync ( app: string, arg: string, uuid: string, cb?: IEventCallback ): string;
+    executeAsync ( app: string, argOrCallback?: string | IEventCallback, uuidOrCallback?: string | IEventCallback, cb?: IEventCallback ): string {
         const oldAsyncValue = this.execAsync;
         this.execAsync = true;
 
-        const eventUuid = this.execute(app, argOrCallback as string, uuidOrCallback as string, cb);
+        const eventUuid = this.execute( app, argOrCallback as string, uuidOrCallback as string, cb );
 
         this.execAsync = oldAsyncValue;
 
@@ -594,8 +537,7 @@ export class Connection extends EventEmitter2
      * to execute() to include the "async: true" header in the message sent to
      * the channel. Other event socket library routines are not affected by this call.
      */
-    setAsyncExecute(value: boolean): void
-    {
+    setAsyncExecute ( value: boolean ): void {
         this.execAsync = value;
     }
 
@@ -616,17 +558,15 @@ export class Connection extends EventEmitter2
      * Q: Can I bridge a call with an Outbound Socket?
      *      (http://wiki.freeswitch.org/wiki/Event_socket_outbound#Q:_Can_I_bridge_a_call_with_an_Outbound_socket_.3F)
      */
-    setEventLock(value: boolean): void
-    {
+    setEventLock ( value: boolean ): void {
         this.execLock = value;
     }
 
     /**
      * Close the socket connection to the FreeSWITCH server.
      */
-    disconnect(): void
-    {
-        this.send('exit');
+    disconnect (): void {
+        this.send( 'exit' );
         this._socket.end();
     }
 
@@ -634,160 +574,142 @@ export class Connection extends EventEmitter2
      * Higher-level Library-Specific Functions
      * Some of these simply provide syntatic sugar
      */
-    auth(password: string, cb?: IErrorCallback<Event>): void
-    {
-        this.sendRecv(`auth ${password}`, (event) =>
-        {
-            if (event.getHeader('Modesl-Reply-OK') === 'accepted')
-            {
+    auth ( password: string, cb?: IErrorCallback<Event> ): void {
+        this.sendRecv( `auth ${password}`, ( event ) => {
+            if ( event.getHeader( 'Modesl-Reply-OK' ) === 'accepted' ) {
                 this._authed = true;
 
-                this.subscribe(this._reqEvents);
+                this.subscribe( this._reqEvents );
 
-                this.emit(ConnectionEvent.AuthSuccess, event);
-                this.emit(ConnectionEvent.Ready);
+                this.emit( ConnectionEvent.AuthSuccess, event );
+                this.emit( ConnectionEvent.Ready );
 
-                if (cb)
-                    cb(null, event);
+                if ( cb )
+                    cb( null, event );
             }
-            else
-            {
+            else {
                 this._authed = false;
-                this.emit(ConnectionEvent.AuthFail, event);
+                this.emit( ConnectionEvent.AuthFail, event );
 
-                if (cb)
-                    cb(new Error('Authentication Failed'), event);
+                if ( cb )
+                    cb( new Error( 'Authentication Failed' ), event );
             }
-        });
+        } );
     }
 
     /**
      * Subscribe to events using json format (native support)
      */
-    subscribe(events: string| string[], cb?: IEventCallback): void
-    {
+    subscribe ( events: string | string[], cb?: IEventCallback ): void {
         events = events || 'all';
 
-        this.events('json', events, cb);
+        this.events( 'json', events, cb );
     }
 
     /**
      * Wraps the show mod_commands function and parses the return value into a javascript array
      */
-    show(item: string, cb?: IErrorCallback<any[]>): void
-    {
-        this.bgapi(`show ${item} as json`, (event) =>
-        {
+    show ( item: string, cb?: IErrorCallback<any[]> ): void {
+        this.bgapi( `show ${item} as json`, ( event ) => {
             const body = event.getBody();
 
-            if (body.indexOf('-ERR') !== -1)
-            {
-                if (cb)
-                    cb(new Error(body));
+            if ( body.indexOf( '-ERR' ) !== -1 ) {
+                if ( cb )
+                    cb( new Error( body ) );
 
                 return;
             }
 
-            try
-            {
-                const parsed = JSON.parse(body);
+            try {
+                const parsed = JSON.parse( body );
 
-                if(cb)
-                    cb(null, parsed.rows);
+                if ( cb )
+                    cb( null, parsed.rows );
             }
-            catch (e)
-            {
-                if(cb)
-                    cb(e);
+            catch ( e ) {
+                if ( cb )
+                    cb( e );
             }
-        });
+        } );
     }
 
     /**
      * make an originating call
      */
-    originate(options: IOriginateOptions, cb?: IEventCallback): void
-    {
+    originate ( options: IOriginateOptions, cb?: IEventCallback ): void {
         let arg = `sofia/${options.profile}/${options.number}@${options.gateway}`;
 
-        if (options.app)
+        if ( options.app )
             arg += ` &${options.app}`;
 
-        if (options.sync)
-            this.api('originate', arg, cb);
+        if ( options.sync )
+            this.api( 'originate', arg, cb );
         else
-            this.bgapi('originate', arg, cb);
+            this.bgapi( 'originate', arg, cb );
     }
 
     /**
      * Send a SIP MESSAGE (SMS)
      */
-    message(options: IMessageOptions, cb?: IEventCallback): void
-    {
-        const event = new Event('custom', 'SMS::SEND_MESSAGE');
+    message ( options: IMessageOptions, cb?: IEventCallback ): void {
+        const event = new Event( 'custom', 'SMS::SEND_MESSAGE' );
 
-        event.addHeader('proto', 'sip');
-        event.addHeader('dest_proto', 'sip');
+        event.addHeader( 'proto', 'sip' );
+        event.addHeader( 'dest_proto', 'sip' );
 
-        event.addHeader('from', `sip:${options.from}`);
-        event.addHeader('from_full', `sip:${options.from}`);
+        event.addHeader( 'from', `sip:${options.from}` );
+        event.addHeader( 'from_full', `sip:${options.from}` );
 
-        event.addHeader('to', options.to);
-        event.addHeader('sip_profile', options.profile);
-        event.addHeader('subject', options.subject);
+        event.addHeader( 'to', options.to );
+        event.addHeader( 'sip_profile', options.profile );
+        event.addHeader( 'subject', options.subject );
 
-        if (options.deliveryConfirmation)
-            event.addHeader('blocking', 'true');
+        if ( options.deliveryConfirmation )
+            event.addHeader( 'blocking', 'true' );
 
-        event.addHeader('type', 'text/plain');
-        event.addHeader('Content-Type', 'text/plain');
+        event.addHeader( 'type', 'text/plain' );
+        event.addHeader( 'Content-Type', 'text/plain' );
 
-        event.addBody(options.body);
+        event.addBody( options.body );
 
-        this.sendEvent(event, cb);
+        this.sendEvent( event, cb );
     }
 
     /**
      * Helper to actually dispatch api commands.
      */
-    private _sendApiCommand(
+    private _sendApiCommand (
         command: string,
         jobid: string,
-        addToFilter: (cb?: () => void) => void,
-        removeFromFilter: (cb?: () => void) => void,
-        cb?: IEventCallback): void
-    {
+        addToFilter: ( cb?: () => void ) => void,
+        removeFromFilter: ( cb?: () => void ) => void,
+        cb?: IEventCallback ): void {
         const params = { [HeaderNames.JobUuid]: jobid };
 
-        addToFilter(() =>
-        {
-            if (cb)
-            {
-                this.once(`esl::event::BACKGROUND_JOB::${jobid}`, (event: Event) =>
-                {
-                    removeFromFilter(() => cb(event));
-                });
+        addToFilter( () => {
+            if ( cb ) {
+                this.once( `esl::event::BACKGROUND_JOB::${jobid}`, ( event: Event ) => {
+                    removeFromFilter( () => cb( event ) );
+                } );
             }
-            else
-            {
+            else {
                 removeFromFilter();
             }
 
-            this.sendRecv(`bgapi ${command}`, params);
-        });
+            this.sendRecv( `bgapi ${command}`, params );
+        } );
     }
 
     /**
      * Helper for execute, sends the actual message
      */
-    private _sendExecute(uniqueId: string, args: IDictionary<string>, cb?: IEventCallback): string
-    {
+    private _sendExecute ( uniqueId: string, args: IDictionary<string>, cb?: IEventCallback ): string {
         args['call-command'] = 'execute';
 
-        if (this.execAsync)
+        if ( this.execAsync )
             args['async'] = 'true';
 
-        if (this.execLock)
+        if ( this.execLock )
             args['event-lock'] = 'true';
 
         // this method of event tracking is based on:
@@ -796,22 +718,20 @@ export class Connection extends EventEmitter2
         args['Event-UUID'] = eventUuid;
 
         const eventName = `esl::event::CHANNEL_EXECUTE_COMPLETE::${uniqueId}`;
-        const cbWrapper = (event: Event) =>
-        {
-            const id = event.getHeader('Application-UUID') || event.getHeader('Event-UUID');
+        const cbWrapper = ( event: Event ) => {
+            const id = event.getHeader( 'Application-UUID' ) || event.getHeader( 'Event-UUID' );
 
-            if (args['Event-UUID'] === id)
-            {
-                this.removeListener(eventName, cbWrapper);
+            if ( args['Event-UUID'] === id ) {
+                this.removeListener( eventName, cbWrapper );
 
-                if (cb)
-                    cb(event);
+                if ( cb )
+                    cb( event );
             }
         };
 
-        this.on(eventName, cbWrapper);
+        this.on( eventName, cbWrapper );
 
-        this.send(`sendmsg ${uniqueId}`, args);
+        this.send( `sendmsg ${uniqueId}`, args );
 
         return eventUuid;
     }
@@ -819,31 +739,28 @@ export class Connection extends EventEmitter2
     /**
      * Called when socket connects to FSW ESL Server or when we successfully listen to the fd
      */
-    private _onConnect(): void
-    {
-        this._parser = new Parser(this._socket);
+    private _onConnect (): void {
+        this._parser = new Parser( this._socket );
 
-        this._parser.on(ParserEvent.Event, this._onEvent.bind(this));
-        this._parser.on(ParserEvent.Error, (err: Error) => this.emit(ConnectionEvent.Error, err));
+        this._parser.on( ParserEvent.Event, this._onEvent.bind( this ) );
+        this._parser.on( ParserEvent.Error, ( err: Error ) => this.emit( ConnectionEvent.Error, err ) );
 
         this._connecting = false;
-        this.emit(ConnectionEvent.Connect);
+        this.emit( ConnectionEvent.Connect );
     }
 
     /**
      * When we get a generic ESLevent from FSW
      */
-    private _onEvent(event: Event, headers: IDictionary<string>, body: string): void
-    {
-        const uniqueId = event.getHeader('Job-UUID') || event.getHeader('Unique-ID') || event.getHeader('Core-UUID');
+    private _onEvent ( event: Event, headers: IDictionary<string>, body: string ): void {
+        const uniqueId = event.getHeader( 'Job-UUID' ) || event.getHeader( 'Unique-ID' ) || event.getHeader( 'Core-UUID' );
         const suffix = uniqueId ? `::${uniqueId}` : '';
         let emitName = 'esl::event';
 
         // massage Content-Types into event names,
         // since not all events actually have an Event-Name
         // header; we have to make our own
-        switch(headers[HeaderNames.ContentType])
-        {
+        switch ( headers[HeaderNames.ContentType] ) {
             case 'auth/request':
                 emitName += '::auth::request';
                 break;
@@ -851,12 +768,10 @@ export class Connection extends EventEmitter2
             case 'command/reply':
                 emitName += '::command::reply';
 
-                if (headers[HeaderNames.EventName] === 'CHANNEL_DATA')
-                {
-                    if (this.type === ConnectionType.Outbound)
-                    {
+                if ( headers[HeaderNames.EventName] === 'CHANNEL_DATA' ) {
+                    if ( this.type === ConnectionType.Outbound ) {
                         this._channelData = event;
-                        this.emit(ConnectionEvent.ChannelDataPrefix + suffix, event);
+                        this.emit( ConnectionEvent.ChannelDataPrefix + suffix, event );
                     }
                 }
                 break;
@@ -877,13 +792,13 @@ export class Connection extends EventEmitter2
             case 'text/event-json':
             case 'text/event-plain':
             case 'text/event-xml':
-                emitName += '::' + event.getHeader(HeaderNames.EventName) + suffix;
+                emitName += '::' + event.getHeader( HeaderNames.EventName ) + suffix;
                 break;
 
             default:
                 emitName += '::raw::' + headers[HeaderNames.ContentType];
         }
 
-        this.emit(emitName, event, headers, body);
+        this.emit( emitName, event, headers, body );
     }
 }

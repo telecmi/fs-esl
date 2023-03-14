@@ -1,16 +1,16 @@
 {
-  "name": "modesl",
-  "version": "2.0.0",
+  "name": "fsesl",
+  "version": "1.0.0",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "description": "FreeSWITCH ESL Node.js Implementation",
-  "author": "Chad Engler <chad@pantherdev.com>",
+  "description": "FreeSWITCH ESL NodeJS Client",
+  "author": "TeleCMI <info@telecmi.com>",
   "license": "MIT",
-  "homepage": "https://github.com/englercj/node-esl",
-  "bugs": "https://github.com/englercj/node-esl/issues",
+  "homepage": "https://github.com/telecmi/fs-esl/node-esl",
+  "bugs": "https://github.com/telecmi/fs-esl/issues",
   "repository": {
     "type": "git",
-    "url": "https://github.com/englercj/node-esl.git"
+    "url": "https://github.com/telecmi/fs-esl.git"
   },
   "keywords": [
     "freeswitch",
