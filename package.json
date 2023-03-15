@@ -1,59 +1,49 @@
 {
   "name": "fsesl",
   "version": "1.0.0",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "description": "FreeSWITCH ESL NodeJS Client",
-  "author": "TeleCMI <info@telecmi.com>",
-  "license": "MIT",
-  "homepage": "https://github.com/telecmi/fs-esl/node-esl",
-  "bugs": "https://github.com/telecmi/fs-esl/issues",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/telecmi/fs-esl.git"
-  },
+  "description": "FreeSWITCH ESL Node.js Implementation",
+  "author": "Chad Engler <chad@pantherdev.com>",
   "keywords": [
     "freeswitch",
-    "fsw",
+    "api",
+    "wrapper",
     "esl",
-    "event socket",
-    "event socket library"
+    "event",
+    "socket",
+    "library"
   ],
-  "files": [
-    "dist/",
-    "src/",
-    "LICENSE",
-    "README.md",
-    "package.json"
-  ],
-  "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "watch": "tsc --watch --preserveWatchOutput -p tsconfig.json",
-    "test": "mocha -r ts-node/register test/spec/*.test.ts test/spec/**/*.test.ts",
-    "docs": "typedoc ./src",
-    "prepublishOnly": "npm run build",
-    "postpublish": "npm run deploy",
-    "predeploy": "rimraf ./docs && npm run docs && touch ./docs/.nojekyll",
-    "deploy": "gh-pages --dotfiles -d docs"
+  "homepage": "https://github.com/telecmi/fs-esl",
+  "bugs": "https://github.com/telecmi/fs-esl",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/telecmi/fs-esl"
   },
+  "main": "lib/index",
   "dependencies": {
-    "eventemitter2": "^6.4.9",
-    "uuid": "^9.0.0",
-    "xml2js": "^0.4.23"
+    "eventemitter2": "^4.1",
+    "uuid": "^3.1.0",
+    "xml2js": "^0.4.19"
   },
   "devDependencies": {
-    "@types/node": "^18.15.3",
-    "@types/uuid": "^9.0.1",
-    "@types/xml2js": "^0.4.11",
-    "cross-env": "^7.0.3",
-    "gh-pages": "^5.0.0",
-    "mocha": "^10.2.0",
-    "ts-node": "^10.9.1",
-    "typedoc": "^0.23.26",
-    "typedoc-md-theme": "^1.0.1",
-    "typescript": "^4.9.5"
+    "grunt": "^1.0.1",
+    "grunt-contrib-jshint": "^1.1.0",
+    "grunt-mocha-cov": "^0.4.0",
+    "mocha-term-cov-reporter": "^0.2.3",
+    "chai": "^4.1.2",
+    "sinon": "^3.2.1",
+    "sinon-chai": "^2.13.0"
+  },
+  "scripts": {
+    "test": "grunt test"
   },
   "engines": {
-    "node": ">=8.x"
+    "node": ">=1.x"
+  },
+  "config": {
+    "blanket": {
+      "pattern": [
+        "node-esl/lib"
+      ]
+    }
   }
 }
